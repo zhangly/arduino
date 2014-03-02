@@ -1,99 +1,105 @@
-//
-//mydht11.c
-//
-#include <wiringPi.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-typedef unsigned char uint8;
-typedef unsigned int  uint16;
-typedef unsigned long uint32;
-
-#define HIGH_TIME 32
-
-int pinNumber =1;  //use gpio1 to read data
-uint32 databuf;
+/*
+dht11 test
+*/
  
- 
+int DHT11PIN = 7;
+uint8_t bits[5]={0,0,0,0,0};
+#define TIMEOUT 10000
 
-uint8 readSensorData(void)
+
+int LedPin=2;
+
+
+void setup ()
 {
-    uint8 crc; 
-    uint8 i;
- 
-    pinMode(pinNumber,OUTPUT); // set mode to output
-    digitalWrite(pinNumber, 0); // output a high level 
-    delay(25);
-    digitalWrite(pinNumber, 1); // output a low level 
-    pinMode(pinNumber, INPUT); // set mode to input
-    pullUpDnControl(pinNumber,PUD_UP);
-
-    delayMicroseconds(27);
-    if(digitalRead(pinNumber)==0) //SENSOR ANS
-       {
-         while(!digitalRead(pinNumber)); //wait to high
-
-	  for(i=0;i<32;i++)
-	   {
-	   while(digitalRead(pinNumber)); //data clock start
-	   while(!digitalRead(pinNumber)); //data start
-          delayMicroseconds(HIGH_TIME);
-          databuf*=2;
-           if(digitalRead(pinNumber)==1) //1
- 	       {
-                databuf++;
- 	       }
-	    }
-
-	  for(i=0;i<8;i++)
-	   {
-	   while(digitalRead(pinNumber)); //data clock start
-	   while(!digitalRead(pinNumber)); //data start
-          delayMicroseconds(HIGH_TIME);
-          crc*=2;  
-          if(digitalRead(pinNumber)==1) //1
-	       {
-                crc++;
-	       }
-	    }
-	return 1;
-       }
-   else
-        {
-        return 0;
-         }
+  Serial.begin(9600);
+  pinMode( DHT11PIN,OUTPUT);
+  pinMode( LedPin,OUTPUT);
 }
- 
-int main (void)
+void loop()
 {
-
-  printf("Use GPIO1 to read data!\n");
-
-  if (-1 == wiringPiSetup()) {
-    printf("Setup wiringPi failed!");
-    return 1;
+  int iRet =  dht11_read(DHT11PIN);
+  if (iRet==0){
+    Serial.print("RH:");
+    Serial.print(bits[0]);
+    Serial.print("  TMP:");
+    Serial.println(bits[2]);
+  }else{
+     Serial.print("Error:");
+     Serial.println(iRet);
   }
- 
-  pinMode(pinNumber, OUTPUT); // set mode to output
-  digitalWrite(pinNumber, 1); // output a high level 
+  
+  pm25_read();
+  delay(1000);
+}
 
-  printf("Enter OS-------\n");
-  while(1) {
-    pinMode(pinNumber,OUTPUT); // set mode to output
-    digitalWrite(pinNumber, 1); // output a high level 
-    delay(3000);
-    if(readSensorData())
-    {
-       printf("Congratulations ! Sensor data read ok!\n");
-       printf("RH:%d.%d\n",(databuf>>24)&0xff,(databuf>>16)&0xff); 
-       printf("TMP:%d.%d\n",(databuf>>8)&0xff,databuf&0xff);
-       databuf=0;
-     }
-    else
-     {
-        printf("Sorry! Sensor dosent ans!\n");
-       databuf=0;
-      }
-  }
-  return 0;
+// return values:  
+//  0 : OK  
+// -1 : checksum error 
+// -2 : timeout  
+int dht11_read(uint8_t pin)  
+{  
+    // INIT BUFFERVAR TO RECEIVE DATA  
+    uint8_t cnt = 7;  
+    uint8_t idx = 0;  
+  
+    // EMPTY BUFFER  
+    for (int i=0; i< 5; i++) bits[i] = 0;  
+  
+    // REQUEST SAMPLE  
+    pinMode(pin, OUTPUT);  
+    digitalWrite(pin, LOW);  
+    delay(20);  
+    digitalWrite(pin, HIGH);  
+    delayMicroseconds(40);  
+    pinMode(pin, INPUT);  
+  
+    // GET ACKNOWLEDGE or TIMEOUT  
+    unsigned int loopCnt = TIMEOUT;  
+    while(digitalRead(pin) == LOW)  
+        if (loopCnt-- == 0) return -2;  
+  
+    loopCnt = TIMEOUT;  
+    while(digitalRead(pin) == HIGH)  
+        if (loopCnt-- == 0) return -2;  
+  
+    // READ THE OUTPUT - 40 BITS => 5 BYTES  
+    for (int i=0; i<40; i++)  
+    {  
+        loopCnt = TIMEOUT;  
+        while(digitalRead(pin) == LOW)  
+            if (loopCnt-- == 0) return -2;  
+  
+        unsigned long t = micros();  
+  
+        loopCnt = TIMEOUT;  
+        while(digitalRead(pin) == HIGH)  
+            if (loopCnt-- == 0) return -2;  
+  
+        if ((micros() - t) > 40) bits[idx] |= (1 << cnt);  
+        if (cnt == 0)   // next byte?  
+        {  
+            cnt = 7;     
+            idx++;        
+        }  
+        else cnt--;  
+    }
+    
+  
+    // TEST CHECKSUM  
+    uint8_t sum = bits[0] + bits[2]; // bits[1] && bits[3] both 0  
+    if (bits[4] != sum) return -1; 
+    
+    return 0;  
+} 
+
+void pm25_read(){
+  digitalWrite(LedPin,LOW); // power on the LED
+  delayMicroseconds(280);
+  int dustVal=analogRead(0); // read the dust value
+  delayMicroseconds(40);
+  digitalWrite(LedPin,HIGH); // turn the LED off
+  delayMicroseconds(9680);
+  Serial.print("PM25:");
+  Serial.println(dustVal);
 }
