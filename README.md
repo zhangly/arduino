@@ -5,5 +5,6 @@
 
 #树莓派RaspberryPi  
   哥买的是B型，装的是2013-02-09-wheezy-raspbian，小派的镜像貌似挺难下的，用win32diskimage写的SD卡  
+  连续运行几周后，cpu温度在55摄氏度左右（加装铜散热片）  
   
 
