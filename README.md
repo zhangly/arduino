@@ -1,4 +1,13 @@
-# 公开库 
+# 公开库 steam-book
+```
+git@github.com:zhangly/steam-book.git
+git push git@gitee.com-blazebird/steam-book.git --mirror
+```
+### git简明用法
+<https://gitee.com/blazebird/steam-book/blob/master/git.md>
+
+### markdown简明用法
+<https://gitee.com/blazebird/steam-book/blob/master/markdown.md>
 
 ### Arduino  
   对于Arduino搜百度、谷歌还不如去搜淘宝！  
