@@ -1,7 +1,8 @@
 # 公开库 steam-book
 ```
-git@github.com:zhangly/steam-book.git
-git push git@gitee.com-blazebird/steam-book.git --mirror
+git@gitee.com-blazebird/steam-book.git  
+git remote add github git@github.com:zhangly/steam-book.git  
+git push github --mirror  
 ```
 ### git简明用法
 <https://gitee.com/blazebird/steam-book/blob/master/git.md>
